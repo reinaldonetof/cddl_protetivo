@@ -14,6 +14,8 @@ import android.os.Environment;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,7 +40,9 @@ public class MainActivity extends AppCompatActivity {
 
     CDDL cddl;
     private TextView messageTextView;
-    private View sendButton;
+    private EditText editTextView;
+    private View subscribeButton;
+    private Button sendButton;
     private ConnectionImpl con;
     private ConnectionImpl external_con;
     private Double latitude = 0.0;
@@ -64,29 +68,29 @@ public class MainActivity extends AppCompatActivity {
 //        securityService.grantReadPermissionByCDDLTopic("andre.cardoso@lsdi.ufma.br", SecurityService.ALL_TOPICS);
 //        setCertificates("rootCA.crt", "client.crt", "ca_lsdi");
 
-        initCDDL();
-        subscribeMessage();
-        subscribeExternalMessage();
-        sendButton.setOnClickListener(clickListener);
+        subscribeButton.setOnClickListener(clickListener);
+        sendButton.setOnClickListener(sendListener);
     }
 
     private void setViews() {
-        sendButton = findViewById(R.id.sendButton);
+        editTextView = findViewById(R.id.editText);
+        subscribeButton = findViewById(R.id.subscribeButton);
         messageTextView = findViewById(R.id.messageTexView);
+        sendButton = findViewById(R.id.sendButton);
     }
 
-    private void initCDDL() {
+    private void initCDDL(String clientId) {
         String host = CDDL.startMicroBroker();
         //String host = CDDL.startSecureMicroBroker(getApplicationContext(), true)
         con = ConnectionFactory.createConnection();
-        con.setClientId("clientId-6Uzg69fAi7");
+        con.setClientId(clientId);
         con.setHost(host);
         con.addConnectionListener(connectionListener);
         con.connect();
 
         String host_external = "broker.hivemq.com";
         external_con = ConnectionFactory.createConnection();
-        external_con.setClientId("clientId-6Uzg69fAi7");
+        external_con.setClientId(clientId);
         external_con.setHost(host_external);
         external_con.addConnectionListener(connectionListenerExternal);
         external_con.connect();
@@ -112,15 +116,15 @@ public class MainActivity extends AppCompatActivity {
         Publisher publisher = PublisherFactory.createPublisher();
         publisher.addConnection(external_con);
         MyMessage message = new MyMessage();
-        message.setServiceName("my_service");
+        message.setServiceName("location_external");
         message.setServiceValue(lat + ";" + lon);
         publisher.publish(message);
     }
 
-    private void subscribeExternalMessage() {
+    private void subscribeExternalMessage(String clientId) {
         Subscriber sub = SubscriberFactory.createSubscriber();
         sub.addConnection(external_con);
-        sub.subscribeServiceByName("location_external");
+        sub.subscribeServiceByPublisherAndName(clientId,"location_external");
         sub.subscribeServiceByName("alert");
         sub.subscribeServiceByName("my_service");
         sub.setSubscriberListener(new ISubscriberListener() {
@@ -206,10 +210,20 @@ public class MainActivity extends AppCompatActivity {
 
     };
 
-    private View.OnClickListener clickListener = new View.OnClickListener() {
+    private View.OnClickListener sendListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
             publishExternal(latitude, longitude);
+        }
+    };
+
+    private View.OnClickListener clickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            String et = editTextView.getText().toString();
+            initCDDL(et);
+            subscribeMessage();
+            subscribeExternalMessage(et);
         }
     };
 
