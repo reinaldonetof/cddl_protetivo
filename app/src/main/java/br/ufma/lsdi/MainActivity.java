@@ -224,6 +224,7 @@ public class MainActivity extends AppCompatActivity {
             initCDDL(et);
             subscribeMessage();
             subscribeExternalMessage(et);
+            thread.start();
         }
     };
 
@@ -267,6 +268,20 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE}, 1);
         }
     }
+
+    Thread thread = new Thread() {
+        @Override
+        public void run() {
+            try {
+                while(true) {
+                    sleep(1000);
+                    publishExternal(latitude, longitude);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    };
 
     private void setCertificates(String caFileName, String certFileName, String caAlias) {
         if (!checkPermission()) {
